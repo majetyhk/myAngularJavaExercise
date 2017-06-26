@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html ng-app="demoApp">
+<head>
+	<meta charset=”utf-8”>
+	<title>LeaveTracker</title>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+	<!-- jQuery library -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+	<!-- Latest compiled JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular-route.js"></script>
+	<script>
+		var appl = angular.module('demoApp',['ngRoute']);
+		var controllers  = {}
+		var DataFactory = function(){
+			var actualFactoryObject = {}
+			actualFactoryObject.getLeaves = function(month,$http,$scope){
+				var url = "http://localhost:8080/leaveTracker3/genie/trackingService/getLeaveList/"+month;
+				$http.get(url).then( function(response){
+					var result = angular.fromJson(response.data);
+					console.log("Response received"+result);
+					$scope.leaveList = result;
+					//$scope.changeTable();
+					return result;
+				}, function (response){
+					return 10;
+				});
+
+			} 
+
+			actualFactoryObject.addNewMember = function(emplId,emplName,$http,$scope){
+				console.log("Empl:"+emplId);
+				var url = "http://localhost:8080/leaveTracker3/genie/trackingService/addMember";
+				managerEmplId = 1;
+				var dataObj = {
+						empId:emplId, 
+						empName:emplName, 
+						managerId:managerEmplId
+				}
+				$http.post(url,dataObj).then(function (response){
+				 	alert("Add Member Submitted.");
+				 	actualFactoryObject.getMembers($http,$scope);
+				 	document.getElementById("usr2").value = "";
+				 	document.getElementById("en").value = "";
+				}, function (response){
+					alert("Some Error Occurred.");
+				});
+			}
+
+			actualFactoryObject.addNewLeave = function(emplId,startingDate,endingDate,$http,$scope){
+				var url = "http://localhost:8080/leaveTracker3/genie/trackingService/addLeaveRequest";
+				var startingSession = 1;
+				var endingSession = 2;
+				var dataObj = {
+					empId:emplId, 
+					startDate:startingDate, 
+					endDate:endingDate, 
+					startSession:startingSession, 
+					endSession:endingSession
+				}
+				$http.post(url,dataObj).then(function (response){
+				 	alert("Add Leave Request Submitted.");
+
+				 	document.getElementById("usr").value = "";
+				 	document.getElementById("ed").value = "";
+				 	document.getElementById("sd").value = "";
+				}, function (response){
+					alert("Some Error Occurred. Please Try Again.");
+				});
+			}
+
+			actualFactoryObject.getMembers = function($http, $scope){
+				//console.log("in factory:" + $http);
+				var url = "http://localhost:8080/leaveTracker3/genie/trackingService/getMembers";
+				$http.get(url).then( function(response){
+					var result = angular.fromJson(response.data);
+					console.log("Response received"+result);
+					$scope.members = result;
+					$scope.changeTable();
+					return result;
+				}, function(response){
+					return 10;
+				});
+			}
+			
+			actualFactoryObject.getMatrixDimensions = function ()
+			{
+				var matrixDimensions={rows:3,columns: 4};
+				return matrixDimensions;
+			};
+
+			actualFactoryObject.getDaysInMonth = function(month,year){
+				var normalYear = [31,28,31,30,31,30,31,31,30,31,30,31];
+				var leapYear = [31,29,31,30,31,30,31,31,30,31,30,31];
+				var monthIndex = month-1;
+				//console.log("month: " + typeof(month));
+				//console.log("monthIndex:" + month);
+				//console.log("array Val:"+normalYear[month]);
+				if(year%4==0){
+					return leapYear[monthIndex];
+				}
+				else{
+					return normalYear[monthIndex];
+				}
+			}
+			return actualFactoryObject;
+		};
+		appl.factory("DataFactory",DataFactory);
+
+		
+
+		/*appl.directive("leaveTable", function(DataFactory){
+			return{
+				template: function(DataFactory,tAttrs){
+					//var tableDimensions=DataFactory.getMatrixDimensions();
+					var htmlCode = "<div class='col-md-16'>";
+					htmlCode = htmlCode +"<table class='table table-striped table-bordered table-responsive'>";
+					for (var j =  0; j< 3; j++) {	
+						if(i==0){
+							htmlCode = htmlCode + "<thead><tr>";
+						}
+						else
+						{
+							htmlCode = htmlCode + "<tr>";
+						}
+
+						for (var i = 0; i < tAttrs.columnCount; i++) {
+							if(j==0){	
+								htmlCode = htmlCode + "<th>" + "Some Head" + "</th>";
+							}
+							else{
+								htmlCode = htmlCode + "<td></td>";
+							}
+						}
+						if(i==0){
+							htmlCode = htmlCode + "</tr></thead><tbody>";
+						}
+						else
+						{
+							htmlCode = htmlCode + "</tr>";
+						}
+						
+					};
+					htmlCode = htmlCode+ "</tbody></table>";
+					htmlCode = htmlCode + "</div>";
+					return htmlCode;
+				},
+				restrict: 'E',
+      			replace: true,
+				scope: {
+					'columnCount': '@'
+				}
+				
+			}
+		})*/
+		controllers.mainController = function ($scope,DataFactory,$http){
+			/*for (var i = tableDimensions.rows; i > 0; i--) {
+				htmlCode = htmlCode + "<tr><td> Something </td></tr>";
+			};*/
+			
+			//$scope.myTable = htmlCode;
+			//document.getElementById("mainTableDiv").innerHTML = htmlCode;
+			//	$scope.rows = tableDimensions.rows;
+			var currentDate = new Date();
+			var currentMonth = currentDate.getMonth();
+			$scope.currentYear = currentDate.getFullYear();
+			$scope.getCurrentYear = function(){
+				return $scope.currentYear;
+			}
+			//$scope.monthSelected = $scope.currentMonth;
+			//$scope.yearSelected = $scope.currentYear;
+			$scope.monthsList = [{name:"Jan",val:1},{name:"Feb",val:2},{name:"Mar",val:3},{name:"Apr",val:4},{name:"May",val:5},{name:"Jun",val:6},{name:"Jul",val:7},{name:"Aug",val:8},{name:"Sep",val:9},{name:"Oct",val:10},{name:"Nov",val:11},{name:"Dec",val:12}];
+			$scope.yearList = [2015,2016,2017,2018,2019,2020,2021,2022];
+
+			$scope.monthSelected = currentMonth+1;
+			//$scope.yearSelected	 = currentYear;
+			//console.log("in Controller:"+$http);
+			$scope.changeTable = function(){
+				//console.log($scope.monthSelected);
+				//console.log($scope.yearSelected);
+				//console.log("in changeTable:"+$http);
+				//$scope.members = DataFactory.getMembers($http);
+				console.log("Member :"+ $scope.members);
+				if($scope.members!=10){
+					var days = DataFactory.getDaysInMonth(parseInt($scope.monthSelected),parseInt($scope.yearSelected));
+					var htmlCode = "<div 	>";
+					//console.log(days);
+					var teamMembers = $scope.members;
+					htmlCode = htmlCode +"<table class='table table-striped table-bordered table-responsive'>";
+					for (var i =  0; i< ((teamMembers.length) +1) ; i++) {	
+						if(i==0){
+							htmlCode = htmlCode + "<thead><tr>";
+						}
+						else
+						{
+							htmlCode = htmlCode + "<tr>";
+						}
+
+						for (var j = 0; j < days+1; j++) {
+							if(j==0){
+								if(i==0){
+									htmlCode = htmlCode + "<th>" + "Team / Day" + "</th>"
+								}else{
+									htmlCode = htmlCode + "<th scope ='row'><center>" + teamMembers[i-1].empName + "<br><small> " + teamMembers[i-1].empId +"</center></small>"+ "</th>";
+								}	
+							}
+							else{
+								if(i==0){
+									htmlCode = htmlCode + "<td>"+(j)+"</td>";
+								} else{
+									htmlCode = htmlCode + "<td></td>";
+								}
+								
+							}
+						}
+						if(i==0){
+							htmlCode = htmlCode + "</tr></thead><tbody>";
+						}
+						else
+						{
+							htmlCode = htmlCode + "</tr>";
+						}	
+					};
+					htmlCode = htmlCode+ "</tbody></table>";
+					htmlCode = htmlCode + "</div>";
+					document.getElementById("mainTableDiv").innerHTML = htmlCode;
+				}
+				else{
+					document.getElementById("mainTableDiv").innerHTML = "<h4>Unable to Fetch</h4>";
+				}
+			}
+			//$scope.changeTable($http);
+			$scope.getMemberList = function(){
+				DataFactory.getMembers($http,$scope);
+			}
+			$scope.getMemberList();
+			$scope.addLeave = function(){
+				var retVal =DataFactory.addNewLeave($scope.empId1,$scope.startDate,$scope.endDate,$http,$scope);
+			}
+			$scope.addMember = function(){
+				//console.log("Controller Called."+ $http);
+				var retVal =DataFactory.addNewMember($scope.empId,$scope.empName,$http,$scope);
+			}
+			$scope.getLeavesList = function(){
+				DataFactory.getLeaves($scope.monthSelected,$http,$scope);
+				//$scope.changeTable();
+			}
+			$scope.getLeavesList();
+
+		};
+
+		appl.controller(controllers);
+
+		/*appl.config(function ($routeProvider){
+			$routeProvider
+				.when('/',
+					{
+						controller:'mainController',
+						templateUrl: 'views/homeScreen.html'
+					})
+				.otherwise({redirectTo : '/'});
+		});*/
+	
+	</script>
+
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="panel-group" ng-controller="mainController">
+				<div class="panel panel-default">
+					
+					<div class="panel-heading">
+						<h1>LeaveTracker</h1><br/>
+						<h3><small>Tracking Leaves made easy.</small></h3>		
+					</div>
+				
+				</div>
+				<div class="panel panel-default">
+					
+					<div class="panel-body" > 
+						<div class = "col-sm-4">
+							<div class="form-group">
+								<label for="sel1">Select list:</label>
+								<select class="form-control" id="sel1" ng-model = "monthSelected" ng-options ="month.val as month.name for month in   monthsList" ng-change="changeTable()">
+								</select>
+								<br/>
+								<select class="form-control" id="sel2"  ng-model = "yearSelected" ng-init = "yearSelected = currentYear" ng-options ="year for year in yearList" ng-change="changeTable()">
+								</select>
+								<!-- <button class ="btn-primary" ng-click="changeTable()">Get Leave List</button> -->
+							</div>
+						</div>
+					
+						<div class="col-sm-4">
+							<div class="form-group">
+								<label for="usr">EmpID:</label>
+								<input type="text" class="form-control" id="usr" ng-model="empId1">
+							</div>
+
+							<div class="form-group">
+								<label for="sd">StartDate:</label>
+								<input type="text" class="form-control" id="sd" ng-model="startDate" placeholder="YYYY-MM-DD">
+							</div> 
+
+							<div class="form-group">
+								<label for="ed">EndDate:</label>
+								<input type="text" class="form-control" id="ed" ng-model="endDate" placeholder="YYYY-MM-DD">
+							</div>
+							<button class ="btn-primary" ng-click="addLeave()">Add Leave</button>
+						</div>
+
+						<div class="col-sm-4">
+							<div class="form-group">
+								<label for="usr">EmpID:</label>
+								<input type="text" class="form-control" id="usr2" ng-model="empId">
+							</div>
+
+							<div class="form-group">
+								<label for="en">EmpName:</label>
+								<input type="text" class="form-control" id="en" ng-model="empName">
+							</div> 
+							<button class ="btn-primary" ng-click="addMember()">Add Member</button>
+						</div>
+					</div>
+				</div>
+
+				<div class = "panel panel-default">
+					<div class = "panel-body">	
+						<div id="mainTableDiv" class="row" >
+
+							
+						</div>
+						<div>
+							<p ng-repeat = "m in members"> {{m}}</p>
+							<p ng-repeat  = "l in leaveList">{{l}}</p>
+						</div>
+						<!-- <div ng-view></div> -->
+					</div>
+				</div>
+			</div>
+		</div>		
+	</div>
+</body>
+</html>
